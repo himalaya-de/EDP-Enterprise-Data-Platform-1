@@ -7,6 +7,13 @@ resource "google_bigquery_dataset" "contributor_bronze" {
   project     = var.project_id
   description = "Bronze layer for contributor data from MySQL"
 
+  labels = {
+    owner       = "de-platform"
+    environment = var.env
+    layer       = "bronze"
+    team        = "data-platform"
+  }
+
   delete_contents_on_destroy = false
 }
 
@@ -16,6 +23,13 @@ resource "google_bigquery_dataset" "qualityaudit_bronze" {
   project     = var.project_id
   description = "Bronze layer for quality audit data from Postgres"
 
+  labels = {
+    owner       = "de-platform"
+    environment = var.env
+    layer       = "bronze"
+    team        = "data-platform"
+  }
+
   delete_contents_on_destroy = false
 }
 
@@ -24,6 +38,13 @@ resource "google_bigquery_dataset" "programops_bronze" {
   location    = var.region
   project     = var.project_id
   description = "Bronze layer for program ops data from MongoDB"
+
+  labels = {
+    owner       = "de-platform"
+    environment = var.env
+    layer       = "bronze"
+    team        = "data-platform"
+  }
 
   delete_contents_on_destroy = false
 }
@@ -35,6 +56,13 @@ resource "google_bigquery_dataset" "contributor_silver" {
   project     = var.project_id
   description = "Silver layer for cleaned and validated contributor data"
 
+  labels = {
+    owner       = "de-platform"
+    environment = var.env
+    layer       = "silver"
+    team        = "data-platform"
+  }
+
   delete_contents_on_destroy = false
 }
 
@@ -44,6 +72,13 @@ resource "google_bigquery_dataset" "qualityaudit_silver" {
   project     = var.project_id
   description = "Silver layer for cleaned and validated quality audit data"
 
+  labels = {
+    owner       = "de-platform"
+    environment = var.env
+    layer       = "silver"
+    team        = "data-platform"
+  }
+
   delete_contents_on_destroy = false
 }
 
@@ -52,6 +87,13 @@ resource "google_bigquery_dataset" "programops_silver" {
   location    = var.region
   project     = var.project_id
   description = "Silver layer for cleaned and validated program ops data"
+
+  labels = {
+    owner       = "de-platform"
+    environment = var.env
+    layer       = "silver"
+    team        = "data-platform"
+  }
 
   delete_contents_on_destroy = false
 }
@@ -63,6 +105,13 @@ resource "google_bigquery_dataset" "enterprise_gold" {
   project     = var.project_id
   description = "Gold layer with enterprise-wide dimensional model and facts"
 
+  labels = {
+    owner       = "de-platform"
+    environment = var.env
+    layer       = "gold"
+    team        = "data-platform"
+  }
+
   delete_contents_on_destroy = false
 }
 
@@ -73,6 +122,13 @@ resource "google_bigquery_dataset" "applemap_mart" {
   project     = var.project_id
   description = "Data mart for Apple Maps team analytics"
 
+  labels = {
+    owner       = "apple-maps"
+    environment = var.env
+    layer       = "mart"
+    team        = "applemap"
+  }
+
   delete_contents_on_destroy = false
 }
 
@@ -81,6 +137,13 @@ resource "google_bigquery_dataset" "googleads_mart" {
   location    = var.region
   project     = var.project_id
   description = "Data mart for Google Ads team analytics"
+
+  labels = {
+    owner       = "google-ads"
+    environment = var.env
+    layer       = "mart"
+    team        = "googleads"
+  }
 
   delete_contents_on_destroy = false
 }
@@ -91,6 +154,13 @@ resource "google_bigquery_dataset" "metaads_mart" {
   project     = var.project_id
   description = "Data mart for Meta Ads team analytics"
 
+  labels = {
+    owner       = "meta-ads"
+    environment = var.env
+    layer       = "mart"
+    team        = "metaads"
+  }
+
   delete_contents_on_destroy = false
 }
 
@@ -99,6 +169,13 @@ resource "google_bigquery_dataset" "googlesearch_mart" {
   location    = var.region
   project     = var.project_id
   description = "Data mart for Google Search team analytics"
+
+  labels = {
+    owner       = "google-search"
+    environment = var.env
+    layer       = "mart"
+    team        = "googlesearch"
+  }
 
   delete_contents_on_destroy = false
 }
@@ -110,6 +187,14 @@ resource "google_bigquery_table" "contributors_bronze" {
   dataset_id = google_bigquery_dataset.contributor_bronze.dataset_id
   table_id   = "contributors"
   project    = var.project_id
+
+  labels = {
+    owner       = "de-platform"
+    environment = var.env
+    layer       = "bronze"
+    team        = "data-platform"
+    table_type  = "fact"
+  }
 
   schema = jsonencode([
     {
@@ -156,6 +241,14 @@ resource "google_bigquery_table" "tasks_bronze" {
   dataset_id = google_bigquery_dataset.contributor_bronze.dataset_id
   table_id   = "tasks"
   project    = var.project_id
+
+  labels = {
+    owner       = "de-platform"
+    environment = var.env
+    layer       = "bronze"
+    team        = "data-platform"
+    table_type  = "fact"
+  }
 
   schema = jsonencode([
     {
@@ -213,6 +306,14 @@ resource "google_bigquery_table" "task_feedback_bronze" {
   table_id   = "task_feedback"
   project    = var.project_id
 
+  labels = {
+    owner       = "de-platform"
+    environment = var.env
+    layer       = "bronze"
+    team        = "data-platform"
+    table_type  = "fact"
+  }
+
   schema = jsonencode([
     {
       name = "feedback_id"
@@ -264,6 +365,14 @@ resource "google_bigquery_table" "audits_bronze" {
   dataset_id = google_bigquery_dataset.qualityaudit_bronze.dataset_id
   table_id   = "audits"
   project    = var.project_id
+
+  labels = {
+    owner       = "de-platform"
+    environment = var.env
+    layer       = "bronze"
+    team        = "data-platform"
+    table_type  = "fact"
+  }
 
   schema = jsonencode([
     {
@@ -321,6 +430,14 @@ resource "google_bigquery_table" "audit_issues_bronze" {
   table_id   = "audit_issues"
   project    = var.project_id
 
+  labels = {
+    owner       = "de-platform"
+    environment = var.env
+    layer       = "bronze"
+    team        = "data-platform"
+    table_type  = "fact"
+  }
+
   schema = jsonencode([
     {
       name = "issue_id"
@@ -373,6 +490,14 @@ resource "google_bigquery_table" "program_metadata_bronze" {
   table_id   = "program_metadata"
   project    = var.project_id
 
+  labels = {
+    owner       = "de-platform"
+    environment = var.env
+    layer       = "bronze"
+    team        = "data-platform"
+    table_type  = "dimension"
+  }
+
   schema = jsonencode([
     {
       name = "program_id"
@@ -423,6 +548,14 @@ resource "google_bigquery_table" "acknowledgements_bronze" {
   dataset_id = google_bigquery_dataset.programops_bronze.dataset_id
   table_id   = "acknowledgements"
   project    = var.project_id
+
+  labels = {
+    owner       = "de-platform"
+    environment = var.env
+    layer       = "bronze"
+    team        = "data-platform"
+    table_type  = "fact"
+  }
 
   schema = jsonencode([
     {
@@ -507,6 +640,14 @@ resource "google_bigquery_table" "applemap_performance_summary" {
   table_id   = "performance_summary"
   project    = var.project_id
 
+  labels = {
+    owner       = "apple-maps"
+    environment = var.env
+    layer       = "mart"
+    team        = "applemap"
+    table_type  = "view"
+  }
+
   view {
     query = <<EOF
 -- LINEAGE: This view aggregates data from contributor_bronze tables
@@ -540,6 +681,14 @@ resource "google_bigquery_table" "applemap_contributor_leaderboard" {
   dataset_id = google_bigquery_dataset.applemap_mart.dataset_id
   table_id   = "contributor_leaderboard"
   project    = var.project_id
+
+  labels = {
+    owner       = "apple-maps"
+    environment = var.env
+    layer       = "mart"
+    team        = "applemap"
+    table_type  = "view"
+  }
 
   view {
     query = <<EOQ
@@ -576,6 +725,14 @@ resource "google_bigquery_table" "googleads_campaign_performance" {
   table_id   = "campaign_performance"
   project    = var.project_id
 
+  labels = {
+    owner       = "google-ads"
+    environment = var.env
+    layer       = "mart"
+    team        = "googleads"
+    table_type  = "view"
+  }
+
   view {
     query = <<EOQ
 SELECT 
@@ -606,6 +763,14 @@ resource "google_bigquery_table" "googleads_quality_metrics" {
   dataset_id = google_bigquery_dataset.googleads_mart.dataset_id
   table_id   = "quality_metrics"
   project    = var.project_id
+
+  labels = {
+    owner       = "google-ads"
+    environment = var.env
+    layer       = "mart"
+    team        = "googleads"
+    table_type  = "view"
+  }
 
   view {
     query = <<EOQ
@@ -641,6 +806,14 @@ resource "google_bigquery_table" "metaads_engagement_analytics" {
   table_id   = "engagement_analytics"
   project    = var.project_id
 
+  labels = {
+    owner       = "meta-ads"
+    environment = var.env
+    layer       = "mart"
+    team        = "metaads"
+    table_type  = "view"
+  }
+
   view {
     query = <<EOQ
 SELECT 
@@ -671,6 +844,14 @@ resource "google_bigquery_table" "metaads_creator_insights" {
   dataset_id = google_bigquery_dataset.metaads_mart.dataset_id
   table_id   = "creator_insights"
   project    = var.project_id
+
+  labels = {
+    owner       = "meta-ads"
+    environment = var.env
+    layer       = "mart"
+    team        = "metaads"
+    table_type  = "view"
+  }
 
   view {
     query = <<EOQ
@@ -710,6 +891,14 @@ resource "google_bigquery_table" "googlesearch_optimization_metrics" {
   table_id   = "optimization_metrics"
   project    = var.project_id
 
+  labels = {
+    owner       = "google-search"
+    environment = var.env
+    layer       = "mart"
+    team        = "googlesearch"
+    table_type  = "view"
+  }
+
   view {
     query = <<EOQ
 SELECT 
@@ -740,6 +929,14 @@ resource "google_bigquery_table" "googlesearch_ranking_impact" {
   dataset_id = google_bigquery_dataset.googlesearch_mart.dataset_id
   table_id   = "ranking_impact"
   project    = var.project_id
+
+  labels = {
+    owner       = "google-search"
+    environment = var.env
+    layer       = "mart"
+    team        = "googlesearch"
+    table_type  = "view"
+  }
 
   view {
     query = <<EOQ

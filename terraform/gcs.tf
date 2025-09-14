@@ -4,6 +4,14 @@ resource "google_storage_bucket" "staging_contributor" {
   location = var.region
   project  = var.project_id
 
+  labels = {
+    owner       = "de-platform"
+    environment = var.env
+    team        = "data-platform"
+    purpose     = "staging"
+    data_domain = "contributor"
+  }
+
   uniform_bucket_level_access = true
   
   lifecycle_rule {
@@ -25,6 +33,14 @@ resource "google_storage_bucket" "staging_qualityaudit" {
   location = var.region
   project  = var.project_id
 
+  labels = {
+    owner       = "de-platform"
+    environment = var.env
+    team        = "data-platform"
+    purpose     = "staging"
+    data_domain = "qualityaudit"
+  }
+
   uniform_bucket_level_access = true
   
   lifecycle_rule {
@@ -45,6 +61,14 @@ resource "google_storage_bucket" "staging_programops" {
   name     = "${var.project_id}-staging-programops-${var.env}"
   location = var.region
   project  = var.project_id
+
+  labels = {
+    owner       = "de-platform"
+    environment = var.env
+    team        = "data-platform"
+    purpose     = "staging"
+    data_domain = "programops"
+  }
 
   uniform_bucket_level_access = true
   

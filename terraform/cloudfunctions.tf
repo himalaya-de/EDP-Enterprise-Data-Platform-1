@@ -29,6 +29,13 @@ resource "google_storage_bucket" "function_source" {
   location = var.region
   project  = var.project_id
 
+  labels = {
+    owner       = "de-platform"
+    environment = var.env
+    team        = "data-platform"
+    purpose     = "cloud-function-source"
+  }
+
   uniform_bucket_level_access = true
 }
 
@@ -87,6 +94,7 @@ resource "google_cloudfunctions_function" "cf_contributor_staging_to_bronze" {
   service_account_email = google_service_account.cf_contributor.email
 
   labels = {
+    owner       = "de-platform"
     environment = var.env
     team        = "data-platform"
     function    = "staging-to-bronze"
@@ -129,6 +137,7 @@ resource "google_cloudfunctions_function" "cf_qualityaudit_staging_to_bronze" {
   service_account_email = google_service_account.cf_qualityaudit.email
 
   labels = {
+    owner       = "de-platform"
     environment = var.env
     team        = "data-platform"
     function    = "staging-to-bronze"
@@ -171,6 +180,7 @@ resource "google_cloudfunctions_function" "cf_programops_staging_to_bronze" {
   service_account_email = google_service_account.cf_programops.email
 
   labels = {
+    owner       = "de-platform"
     environment = var.env
     team        = "data-platform"
     function    = "staging-to-bronze"
