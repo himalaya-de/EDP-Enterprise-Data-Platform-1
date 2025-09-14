@@ -1,0 +1,320 @@
+# Datastream Configuration Placeholders
+
+This file contains instructions for configuring Datastream connection profiles and streams after the Terraform infrastructure is deployed.
+
+## Prerequisites
+
+1. **Source Databases**: Ensure MySQL, PostgreSQL, and MongoDB instances are running and accessible
+2. **Network Connectivity**: Set up VPC peering or private connectivity to source databases
+3. **Database Users**: Create dedicated datastream users with appropriate permissions
+4. **Secret Manager**: Store database credentials in the specified Secret Manager secrets
+
+## Database Connection Secrets
+
+The following Secret Manager secrets need to be created and populated:
+
+### 1. Contributor MySQL Connection (`contributor-mysql-connection`)
+
+Create the secret with JSON content:
+```json
+{
+  "hostname": "10.0.1.5",
+  "port": 3306,
+  "username": "datastream_user",
+  "password": "REPLACE_WITH_ACTUAL_PASSWORD",
+  "database": "contributor_db"
+}
+```
+
+**Required MySQL User Permissions:**
+```sql
+CREATE USER 'datastream_user'@'%' IDENTIFIED BY 'SECURE_PASSWORD';
+GRANT SELECT, RELOAD, SHOW DATABASES, REPLICATION SLAVE, REPLICATION CLIENT ON *.* TO 'datastream_user'@'%';
+GRANT SELECT ON contributor_db.* TO 'datastream_user'@'%';
+FLUSH PRIVILEGES;
+```
+
+**MySQL Configuration Requirements:**
+```ini
+# Enable binary logging
+log-bin=mysql-bin
+binlog-format=ROW
+binlog-row-image=FULL
+
+# Enable GTID (recommended)
+gtid-mode=ON
+enforce-gtid-consistency=ON
+```
+
+### 2. Quality Audit PostgreSQL Connection (`qualityaudit-postgres-connection`)
+
+Create the secret with JSON content:
+```json
+{
+  "hostname": "10.0.1.6",
+  "port": 5432,
+  "username": "datastream_user",
+  "password": "REPLACE_WITH_ACTUAL_PASSWORD",
+  "database": "qualityaudit_db"
+}
+```
+
+**Required PostgreSQL User Permissions:**
+```sql
+CREATE USER datastream_user WITH PASSWORD 'SECURE_PASSWORD';
+GRANT CONNECT ON DATABASE qualityaudit_db TO datastream_user;
+GRANT USAGE ON SCHEMA public TO datastream_user;
+GRANT SELECT ON ALL TABLES IN SCHEMA public TO datastream_user;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO datastream_user;
+
+-- Enable replication
+ALTER USER datastream_user REPLICATION;
+```
+
+**PostgreSQL Configuration Requirements:**
+```ini
+# postgresql.conf
+wal_level = logical
+max_replication_slots = 5
+max_wal_senders = 5
+
+# pg_hba.conf
+host replication datastream_user 0.0.0.0/0 md5
+```
+
+### 3. Program Ops MongoDB Connection (`programops-mongo-connection`)
+
+Create the secret with JSON content:
+```json
+{
+  "connection_string": "mongodb://datastream_user:REPLACE_WITH_ACTUAL_PASSWORD@10.0.1.7:27017/programops_db?replicaSet=rs0",
+  "database": "programops_db",
+  "username": "datastream_user",
+  "password": "REPLACE_WITH_ACTUAL_PASSWORD"
+}
+```
+
+**MongoDB User Setup:**
+```javascript
+// Connect to MongoDB
+use programops_db
+
+// Create user with read permissions
+db.createUser({
+  user: "datastream_user",
+  pwd: "SECURE_PASSWORD",
+  roles: [
+    { role: "read", db: "programops_db" },
+    { role: "changeStreamPreAndPostImages", db: "programops_db" }
+  ]
+})
+```
+
+**MongoDB Configuration Requirements:**
+- MongoDB must be configured as a replica set (required for change streams)
+- Enable oplogs with sufficient retention
+
+## Datastream Connection Profile Updates
+
+After creating the secrets, update the Terraform configuration:
+
+### 1. Enable Datastream Resources
+```hcl
+# In terraform.tfvars
+enable_datastream = true
+```
+
+### 2. Update Network Configuration
+
+Replace the placeholder private connection in `terraform/datastream.tf`:
+
+```hcl
+# Create private connection (add this resource)
+resource "google_datastream_private_connection" "main" {
+  location              = var.region
+  private_connection_id = "datastream-private-connection"
+  display_name          = "Datastream Private Connection"
+  
+  vpc_peering_config {
+    vpc    = "projects/${var.project_id}/global/networks/default"
+    subnet = "10.1.0.0/29"  # Adjust based on your network setup
+  }
+}
+
+# Then update the connection profiles to reference it:
+private_connectivity {
+  private_connection = google_datastream_private_connection.main.id
+}
+```
+
+### 3. Update Database Hostnames
+
+Replace the placeholder hostnames in `terraform/datastream.tf`:
+
+```hcl
+# For MySQL
+hostname = "10.0.1.5"  # Replace with actual MySQL host
+
+# For PostgreSQL  
+hostname = "10.0.1.6"  # Replace with actual PostgreSQL host
+```
+
+## MongoDB CDC Implementation
+
+Since Datastream doesn't natively support MongoDB, implement MongoDB CDC using one of these approaches:
+
+### Option 1: MongoDB Change Streams + Cloud Function
+
+1. **Deploy MongoDB Change Stream Function:**
+```python
+# cloud_functions/mongodb_cdc/main.py
+import pymongo
+from google.cloud import bigquery
+
+def watch_mongo_changes():
+    client = pymongo.MongoClient("mongodb://...")
+    db = client.programops_db
+    
+    # Watch for changes
+    with db.watch() as stream:
+        for change in stream:
+            # Process change and insert into BigQuery
+            process_change(change)
+```
+
+2. **Deploy as Cloud Run service for continuous operation:**
+```bash
+gcloud run deploy mongodb-cdc \
+  --image gcr.io/${PROJECT_ID}/mongodb-cdc \
+  --platform managed \
+  --region ${REGION} \
+  --service-account sa-datastream-programops@${PROJECT_ID}.iam.gserviceaccount.com
+```
+
+### Option 2: Debezium Connector
+
+1. **Deploy Debezium on Cloud Run or GKE**
+2. **Configure MongoDB connector**
+3. **Stream changes to Pub/Sub → Cloud Function → BigQuery**
+
+### Option 3: Third-party CDC Tools
+
+Consider using:
+- **Fivetran** - Managed CDC service
+- **Stitch** - Singer-based CDC
+- **Airbyte** - Open source data integration
+
+## Network Setup Instructions
+
+### 1. VPC Peering (if databases are in different VPC)
+
+```bash
+# Create VPC peering
+gcloud compute networks peerings create datastream-peering \
+  --network=default \
+  --peer-project=SOURCE_DB_PROJECT \
+  --peer-network=SOURCE_DB_VPC
+```
+
+### 2. Firewall Rules
+
+```bash
+# Allow Datastream access to databases
+gcloud compute firewall-rules create allow-datastream-mysql \
+  --direction=INGRESS \
+  --priority=1000 \
+  --network=default \
+  --action=ALLOW \
+  --rules=tcp:3306 \
+  --source-ranges=10.1.0.0/29
+
+gcloud compute firewall-rules create allow-datastream-postgres \
+  --direction=INGRESS \
+  --priority=1000 \
+  --network=default \
+  --action=ALLOW \
+  --rules=tcp:5432 \
+  --source-ranges=10.1.0.0/29
+```
+
+## Verification Steps
+
+After configuration:
+
+1. **Test Database Connectivity:**
+```bash
+# Test from Cloud Shell or Compute Instance
+mysql -h 10.0.1.5 -u datastream_user -p
+psql -h 10.0.1.6 -U datastream_user -d qualityaudit_db
+mongo mongodb://10.0.1.7:27017/programops_db
+```
+
+2. **Verify Secret Access:**
+```bash
+# Check if Datastream SAs can access secrets
+gcloud secrets versions access latest \
+  --secret=contributor-mysql-connection \
+  --impersonate-service-account=sa-datastream-contributor@${PROJECT_ID}.iam.gserviceaccount.com
+```
+
+3. **Start Datastream Streams:**
+```bash
+# Enable and start streams
+terraform apply -var="enable_datastream=true"
+```
+
+4. **Monitor Stream Status:**
+```bash
+# Check stream status
+gcloud datastream streams list --location=${REGION}
+gcloud datastream streams describe stream-contributor --location=${REGION}
+```
+
+## Troubleshooting
+
+### Common Issues:
+
+1. **Connection Timeout:**
+   - Check firewall rules
+   - Verify private connectivity setup
+   - Ensure database is accessible from Datastream subnet
+
+2. **Permission Denied:**
+   - Verify database user permissions
+   - Check Secret Manager access for service accounts
+   - Ensure service account has Datastream permissions
+
+3. **Schema Mismatch:**
+   - Verify BigQuery table schemas match source data
+   - Check for unsupported data types
+   - Review Datastream transformation rules
+
+### Useful Commands:
+
+```bash
+# View Datastream logs
+gcloud logging read "resource.type=datastream_stream" --limit=50
+
+# Check BigQuery jobs
+bq ls -j --max_results=10
+
+# Monitor table row counts
+bq query --use_legacy_sql=false "SELECT COUNT(*) FROM \`${PROJECT_ID}.contributor_bronze.contributors\`"
+```
+
+## Security Considerations
+
+1. **Rotate database passwords regularly**
+2. **Use least-privilege database users**
+3. **Enable audit logging on source databases**
+4. **Monitor failed connection attempts**
+5. **Set up alerting for stream failures**
+6. **Use VPC-native clusters for additional security**
+
+## Cost Optimization
+
+1. **Datastream pricing is based on data volume**
+2. **Consider batch windows for high-volume tables**
+3. **Use include/exclude patterns to limit synced data**
+4. **Monitor and set up budget alerts**
+5. **Consider archiving old data in source systems**

@@ -1,0 +1,91 @@
+# Enterprise Data Platform - Terraform Variables Example
+# Copy this file to terraform.tfvars and fill in your actual values
+
+# =============================================================================
+# Required Variables
+# =============================================================================
+
+# GCP Project ID - Replace with your actual project ID
+project_id = "your-gcp-project-id"
+
+# GCP Region - Choose the region closest to your users/data sources
+region = "us-central1"  # Options: us-central1, us-east1, europe-west1, asia-east1, etc.
+
+# Environment name - Used for resource naming and labeling
+env = "dev"  # Options: dev, staging, prod
+
+# =============================================================================
+# IAM Groups - Replace with your organization's actual group emails
+# =============================================================================
+
+# Admin group - Full access to all resources for platform operations
+group_admins = "group-admins@yourcompany.com"
+
+# Developer group - Read access to all datasets for troubleshooting
+group_developers = "group-developers@yourcompany.com"
+
+# Analyst group - Read access ONLY to enterprise_gold dataset (no mart access)
+group_analysts = "group-analysts@yourcompany.com"
+
+# =============================================================================
+# Optional Variables - Customize as needed
+# =============================================================================
+
+# Team name for service account labeling
+owner_team_name = "DataPlatformTeam"
+
+# =============================================================================
+# Database Connection Secrets - Secret Manager secret names
+# =============================================================================
+
+# MySQL connection secret for contributor data
+secret_contributor_db = "contributor-mysql-connection"
+
+# PostgreSQL connection secret for quality audit data
+secret_qualityaudit_db = "qualityaudit-postgres-connection"
+
+# MongoDB connection secret for program ops data
+secret_programops_db = "programops-mongo-connection"
+
+# =============================================================================
+# Feature Flags - Enable/disable components
+# =============================================================================
+
+# Enable Datastream resources (set to true after configuring source databases)
+# See ../datastream/placeholders.txt for setup instructions
+enable_datastream = false
+
+# Enable Cloud Functions deployment
+enable_cloud_functions = true
+
+# =============================================================================
+# Example Alternative Configurations
+# =============================================================================
+
+# Production Configuration Example:
+# project_id = "my-company-data-platform-prod"
+# region = "us-central1"
+# env = "prod"
+# group_admins = "data-platform-admins@mycompany.com"
+# group_developers = "data-engineers@mycompany.com"
+# group_analysts = "business-analysts@mycompany.com"
+# owner_team_name = "DataEngineering"
+# enable_datastream = true
+# enable_cloud_functions = true
+
+# Multi-region Setup Example:
+# project_id = "global-data-platform"
+# region = "us-central1"  # Primary region
+# env = "prod"
+# # Note: For multi-region setup, you would need separate Terraform configurations
+# # or use for_each with region variables
+
+# Development/Testing Example:
+# project_id = "my-sandbox-project"
+# region = "us-west1"  # Cheaper region for dev
+# env = "sandbox"
+# group_admins = "dev-team@mycompany.com"
+# group_developers = "dev-team@mycompany.com"
+# group_analysts = "dev-team@mycompany.com"
+# enable_datastream = false  # Use mock data for development
+# enable_cloud_functions = false  # Manual testing
