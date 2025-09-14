@@ -1,6 +1,42 @@
+"""
+=============================================================================
+CLOUD FUNCTION: Quality Audit Staging to Bronze Data Pipeline
+=============================================================================
+
+DATA LINEAGE DOCUMENTATION:
+----------------------------
+SOURCE: GCS Staging Bucket (gs://hackathon2025-01-staging-qualityaudit-demo/)
+├── File Types: CSV, JSON, Parquet, Avro
+├── Naming Convention: {table_name}_{timestamp}.{extension}
+├── Expected Tables: audits, audit_issues
+
+DESTINATION: BigQuery Bronze Dataset
+├── Project: hackathon2025-01
+├── Dataset: qualityaudit_bronze  
+├── Tables: audits, audit_issues
+├── Schema: Auto-detected + Datastream metadata fields
+
+LINEAGE FLOW:
+1. File Upload → GCS Staging Bucket
+2. GCS Event Trigger → Cloud Function (THIS)
+3. Cloud Function → BigQuery Bronze Tables
+4. DOWNSTREAM: Bronze → Silver → Gold → Data Marts
+
+DOWNSTREAM CONSUMERS:
+- Silver Layer: qualityaudit_silver.{audits, audit_issues}
+- Gold Layer: enterprise_gold.fact_audit, enterprise_gold.dim_audit_issue
+- Data Marts: applemap_mart, googleads_mart, metaads_mart, googlesearch_mart
+
+DATA DOMAINS: quality-assurance, audit-tracking, issue-management
+DATA CLASSIFICATION: Internal (no PII)
+PROCESSING_FREQUENCY: Real-time (event-driven)
+=============================================================================
+"""
+
 import json
 import os
 import logging
+from datetime import datetime
 from google.cloud import bigquery
 from google.cloud.exceptions import NotFound
 import pandas as pd
@@ -10,10 +46,23 @@ from typing import Dict, Any
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Environment variables
+# Environment variables with lineage context
 PROJECT_ID = os.environ.get('PROJECT_ID')
 DATASET_ID = os.environ.get('DATASET_ID', 'qualityaudit_bronze')
 TABLE_MAPPING = json.loads(os.environ.get('TABLE_MAPPING', '{}'))
+
+# LINEAGE METADATA CONSTANTS
+LINEAGE_METADATA = {
+    'pipeline_name': 'qualityaudit-staging-to-bronze',
+    'source_system': 'gcs-staging-bucket',
+    'destination_system': 'bigquery-bronze-layer',
+    'data_domain': 'quality-assurance',
+    'processing_tier': 'bronze-ingestion',
+    'downstream_datasets': ['qualityaudit_silver', 'enterprise_gold'],
+    'downstream_marts': ['applemap_mart', 'googleads_mart', 'metaads_mart', 'googlesearch_mart'],
+    'data_classification': 'internal',
+    'contains_pii': False
+}
 
 def main(event: Dict[str, Any], context: Any) -> None:
     """

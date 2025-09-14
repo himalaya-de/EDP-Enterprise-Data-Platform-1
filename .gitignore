@@ -1,0 +1,324 @@
+# =============================================================================
+# Enterprise Data Platform .gitignore
+# =============================================================================
+# This .gitignore is designed to:
+# 1. Keep sensitive data and credentials secure
+# 2. Maintain clean repository for lineage scanning tools
+# 3. Preserve all lineage-related documentation and code
+# 4. Support both local development and CI/CD workflows
+
+# =============================================================================
+# TERRAFORM FILES - Keep lineage-enhanced configurations visible
+# =============================================================================
+# Keep all .tf files for lineage scanning - they contain our enhanced lineage metadata
+# Only ignore sensitive variable files
+terraform.tfvars
+*.tfvars
+!terraform.tfvars.example
+*.tfvars.backup
+
+# Terraform state files (contain sensitive data)
+*.tfstate
+*.tfstate.*
+*.tfstate.backup
+.terraform/
+.terraform.lock.hcl
+terraform.tfplan
+terraform.tfplan.*
+
+# Terraform crash log files
+crash.log
+crash.*.log
+
+# =============================================================================
+# CLOUD FUNCTION DEPLOYMENTS
+# =============================================================================
+# Keep source code visible for lineage scanning, ignore deployment artifacts
+cloud_functions/**/deploy/
+cloud_functions/**/.gcloudignore
+cloud_functions/**/node_modules/
+cloud_functions/**/__pycache__/
+cloud_functions/**/*.pyc
+cloud_functions/**/*.pyo
+cloud_functions/**/*.egg-info/
+cloud_functions/**/dist/
+cloud_functions/**/build/
+
+# =============================================================================
+# CREDENTIALS & SECRETS - Critical for security
+# =============================================================================
+# Service account keys
+*.json
+!**/schema.json
+!**/package.json
+!**/tsconfig.json
+service-account-*.json
+gcp-credentials*.json
+key.json
+credentials.json
+
+# Secret files
+secrets/
+.secrets/
+*.key
+*.pem
+*.p12
+*.pfx
+
+# Environment files with credentials
+.env
+.env.local
+.env.production
+.env.staging
+.env.development
+environment.yml
+environment.yaml
+
+# =============================================================================
+# PYTHON - For Cloud Functions and data processing scripts
+# =============================================================================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# PyInstaller
+*.manifest
+*.spec
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+
+# Virtual environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+.python-version
+
+# =============================================================================
+# NODE.JS - For any JavaScript/TypeScript components
+# =============================================================================
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+.npm
+.eslintcache
+.node_repl_history
+*.tgz
+*.tar.gz
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# =============================================================================
+# BIGQUERY & DATA FILES
+# =============================================================================
+# Sample data files (may contain sensitive data)
+*.csv
+*.tsv
+*.json
+*.parquet
+*.avro
+!**/schema.json
+!**/examples/**/*.json
+!**/templates/**/*.json
+
+# BigQuery exports
+bq-exports/
+bigquery-exports/
+data-exports/
+
+# =============================================================================
+# LOGS & TEMPORARY FILES
+# =============================================================================
+# Log files
+*.log
+logs/
+log/
+*.log.*
+
+# Temporary files
+*.tmp
+*.temp
+temp/
+tmp/
+.tmp/
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# =============================================================================
+# IDE & EDITOR FILES
+# =============================================================================
+# VSCode
+.vscode/
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+# PyCharm
+.idea/
+*.iws
+*.iml
+*.ipr
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# Vim
+*.swp
+*.swo
+*~
+
+# Emacs
+\#*\#
+.\#*
+
+# =============================================================================
+# DOCUMENTATION OUTPUTS - Keep source, ignore generated
+# =============================================================================
+# Keep all .md files for lineage documentation
+# Ignore generated documentation
+docs/_build/
+docs/build/
+site/
+
+# =============================================================================
+# CI/CD & DEPLOYMENT ARTIFACTS
+# =============================================================================
+# GitHub Actions artifacts
+.github/workflows/*.yml.backup
+
+# Google Cloud Build
+cloudbuild.yaml.backup
+cloudbuild-*.yaml
+
+# Deployment packages
+*.zip
+*.tar.gz
+*.tar.bz2
+deployment-*.zip
+
+# =============================================================================
+# DATA LINEAGE TOOLS - Preserve scanning capabilities
+# =============================================================================
+# Keep all lineage-related files visible
+# These files contain enhanced lineage metadata and should be scanned
+# !lineage/
+# !docs/lineage/
+# !**/*lineage*
+# !**/*LINEAGE*
+
+# But ignore tool-generated outputs
+lineage-reports/
+lineage-output/
+*.lineage
+*.lineage.json
+
+# =============================================================================
+# DATABASE BACKUPS & EXPORTS
+# =============================================================================
+*.sql
+*.db
+*.sqlite
+*.sqlite3
+database-backup-*
+db-export-*
+
+# =============================================================================
+# MONITORING & OBSERVABILITY
+# =============================================================================
+# Keep configuration files, ignore data
+monitoring/data/
+metrics/
+traces/
+*.metrics
+
+# =============================================================================
+# SPECIAL EXCEPTIONS - Files to always include
+# =============================================================================
+# Always include these important files even if they match patterns above
+!README.md
+!LINEAGE.md
+!DATA_FLOW.md
+!ARCHITECTURE.md
+!requirements.txt
+!package.json
+!terraform.tfvars.example
+!.github/workflows/deploy.yml
+!.gcloudignore.example
+
+# =============================================================================
+# PROJECT SPECIFIC
+# =============================================================================
+# Ignore demo/test data
+test-data/
+demo-data/
+sample-data/
+mock-data/
+
+# Ignore personal notes and scratch files
+notes.txt
+scratch.txt
+todo.txt
+NOTES.md
+.notes/
+
+# =============================================================================
+# END OF .gitignore
+# =============================================================================
+# This .gitignore is designed to support data lineage scanning while
+# maintaining security and clean repository structure.
+# All lineage-enhanced code and documentation remain visible to scanning tools.

@@ -1,6 +1,42 @@
+"""
+=============================================================================
+CLOUD FUNCTION: Contributor Staging to Bronze Data Pipeline
+=============================================================================
+
+DATA LINEAGE DOCUMENTATION:
+----------------------------
+SOURCE: GCS Staging Bucket (gs://hackathon2025-01-staging-contributor-demo/)
+├── File Types: CSV, JSON, Parquet, Avro
+├── Naming Convention: {table_name}_{timestamp}.{extension}
+├── Expected Tables: contributors, tasks, task_feedback
+
+DESTINATION: BigQuery Bronze Dataset
+├── Project: hackathon2025-01
+├── Dataset: contributor_bronze  
+├── Tables: contributors, tasks, task_feedback
+├── Schema: Auto-detected + Datastream metadata fields
+
+LINEAGE FLOW:
+1. File Upload → GCS Staging Bucket
+2. GCS Event Trigger → Cloud Function (THIS)
+3. Cloud Function → BigQuery Bronze Tables
+4. DOWNSTREAM: Bronze → Silver → Gold → Data Marts
+
+DOWNSTREAM CONSUMERS:
+- Silver Layer: contributor_silver.{contributors, tasks, task_feedback}
+- Gold Layer: enterprise_gold.dim_contributor, enterprise_gold.fact_task
+- Data Marts: applemap_mart, googleads_mart, metaads_mart, googlesearch_mart
+
+DATA DOMAINS: contributor-management, task-tracking, feedback-analysis
+DATA CLASSIFICATION: Restricted (contains PII)
+PROCESSING_FREQUENCY: Real-time (event-driven)
+=============================================================================
+"""
+
 import json
 import os
 import logging
+from datetime import datetime
 from google.cloud import bigquery
 from google.cloud.exceptions import NotFound
 import pandas as pd
@@ -10,25 +46,59 @@ from typing import Dict, Any
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Environment variables
+# Environment variables with lineage context
 PROJECT_ID = os.environ.get('PROJECT_ID')
 DATASET_ID = os.environ.get('DATASET_ID', 'contributor_bronze')
 TABLE_MAPPING = json.loads(os.environ.get('TABLE_MAPPING', '{}'))
+
+# LINEAGE METADATA CONSTANTS
+LINEAGE_METADATA = {
+    'pipeline_name': 'contributor-staging-to-bronze',
+    'source_system': 'gcs-staging-bucket',
+    'destination_system': 'bigquery-bronze-layer',
+    'data_domain': 'contributor-management',
+    'processing_tier': 'bronze-ingestion',
+    'downstream_datasets': ['contributor_silver', 'enterprise_gold'],
+    'downstream_marts': ['applemap_mart', 'googleads_mart', 'metaads_mart', 'googlesearch_mart'],
+    'data_classification': 'restricted',
+    'contains_pii': True
+}
 
 def main(event: Dict[str, Any], context: Any) -> None:
     """
     Cloud Function triggered by GCS object finalization.
     Loads staging files into BigQuery bronze dataset.
     
+    LINEAGE EXECUTION:
+    - SOURCE: gs://{bucket_name}/{file_name}
+    - DESTINATION: {PROJECT_ID}.{DATASET_ID}.{table_name}
+    - PROCESSING_TYPE: file-to-table ingestion
+    - DOWNSTREAM_IMPACT: Triggers silver layer processing
+    
     Args:
         event: Cloud Storage event data
         context: Cloud Function context
     """
+    execution_start = datetime.utcnow()
+    
     try:
         # Extract file information from event
         bucket_name = event['bucket']
         file_name = event['name']
         
+        # LOG LINEAGE: Start of data flow
+        lineage_context = {
+            'execution_id': context.eventId if context else 'unknown',
+            'source_uri': f"gs://{bucket_name}/{file_name}",
+            'source_system': LINEAGE_METADATA['source_system'],
+            'destination_system': LINEAGE_METADATA['destination_system'],
+            'pipeline_name': LINEAGE_METADATA['pipeline_name'],
+            'data_domain': LINEAGE_METADATA['data_domain'],
+            'processing_tier': LINEAGE_METADATA['processing_tier'],
+            'execution_start': execution_start.isoformat()
+        }
+        
+        logger.info(f"LINEAGE_START: {json.dumps(lineage_context)}")
         logger.info(f"Processing file: gs://{bucket_name}/{file_name}")
         
         # Initialize BigQuery client
@@ -68,8 +138,27 @@ def main(event: Dict[str, Any], context: Any) -> None:
         # Wait for job completion
         load_job.result()
         
-        # Log success
+        # LOG LINEAGE: Successful completion
         destination_table = client.get_table(table_ref)
+        execution_end = datetime.utcnow()
+        execution_duration = (execution_end - execution_start).total_seconds()
+        
+        lineage_completion = {
+            'execution_id': context.eventId if context else 'unknown',
+            'status': 'SUCCESS',
+            'source_uri': f"gs://{bucket_name}/{file_name}",
+            'destination_table': f"{PROJECT_ID}.{DATASET_ID}.{table_name}",
+            'rows_processed': load_job.output_rows,
+            'total_rows_in_table': destination_table.num_rows,
+            'execution_duration_seconds': execution_duration,
+            'execution_end': execution_end.isoformat(),
+            'downstream_datasets': LINEAGE_METADATA['downstream_datasets'],
+            'downstream_marts': LINEAGE_METADATA['downstream_marts'],
+            'data_classification': LINEAGE_METADATA['data_classification'],
+            'contains_pii': LINEAGE_METADATA['contains_pii']
+        }
+        
+        logger.info(f"LINEAGE_SUCCESS: {json.dumps(lineage_completion)}")
         logger.info(f"Successfully loaded {load_job.output_rows} rows into "
                    f"{DATASET_ID}.{table_name}. "
                    f"Total rows in table: {destination_table.num_rows}")
